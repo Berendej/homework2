@@ -35,38 +35,16 @@ vector<string> split(const string& str, char d)
     return r;
 }
 
-struct ip_t
+struct ip_t : public tuple<unsigned char, unsigned char, unsigned char, unsigned char>
 {
-    union ipv4_t
+    string to_string() const
     {
-        tuple<unsigned char, unsigned char, unsigned char, unsigned char> bytes_value;
-        unsigned int uint_value;
-
-        ipv4_t() : bytes_value(0,0,0,0)
-        {
-
-        }
-
-        string to_string() const
-        {
-            string s;
-            s = std::to_string(std::get<0>(bytes_value)); s += ".";
-            s += std::to_string(std::get<1>(bytes_value)); s += ".";
-            s += std::to_string(std::get<2>(bytes_value)); s += ".";
-            s += std::to_string(std::get<3>(bytes_value));
-            return s;
-        }
-
-        ipv4_t(const ipv4_t& bro) : uint_value(bro.uint_value)
-        {
-
-        }
-    };
-
-    ipv4_t m_value;
-
-    ip_t(const ip_t& bro) : m_value(bro.m_value)
-    {
+        string s;
+        s = std::to_string(std::get<0>(*this)); s += ".";
+        s += std::to_string(std::get<1>(*this)); s += ".";
+        s += std::to_string(std::get<2>(*this)); s += ".";
+        s += std::to_string(std::get<3>(*this));
+        return s;
     }
 
     ip_t(string ip)
@@ -74,11 +52,13 @@ struct ip_t
         vector<string> vs = split(ip, '.');
         unsigned ix = 0;
         int i;
+        unsigned char uch;
         for (auto n : vs)
         {
             try
             {
                 i = std::stoi(n);
+                uch = static_cast<unsigned char>(i);
             }
             catch (...)
             {
@@ -88,59 +68,49 @@ struct ip_t
             switch (ix)
             {
             case 0:
-                std::get<0>(m_value.bytes_value) = i;
+                std::get<0>(*this) = uch;
                 break;
             case 1:
-                std::get<1>(m_value.bytes_value) = i;
+                std::get<1>(*this) = uch;
                 break;
             case 2:
-                std::get<2>(m_value.bytes_value) = i;
+                std::get<2>(*this) = uch;
                 break;
             case 3:
-                std::get<3>(m_value.bytes_value) = i;
+                std::get<3>(*this) = uch;
                 break;
             }
             ix++;
         }
     }
 
-    ip_t(int c0, int c1, int c2, int c3)
+    ip_t(vector<unsigned char> v)
     {
-        std::get<0>(m_value.bytes_value) = c0;
-        std::get<1>(m_value.bytes_value) = c1;
-        std::get<2>(m_value.bytes_value) = c2;
-        std::get<3>(m_value.bytes_value) = c3;
+        if (v.size() > 0) std::get<0>(*this) = v[0];
+        if (v.size() > 1) std::get<1>(*this) = v[1];
+        if (v.size() > 2) std::get<2>(*this) = v[2];
+        if (v.size() > 3) std::get<3>(*this) = v[3];
     }
 
-    ip_t(vector<int> v)
-    {
-        m_value.uint_value = 0;
-        if (v.size() > 0) std::get<0>(m_value.bytes_value) = v[0];
-        if (v.size() > 1) std::get<1>(m_value.bytes_value) = v[1];
-        if (v.size() > 2) std::get<2>(m_value.bytes_value) = v[2];
-        if (v.size() > 3) std::get<3>(m_value.bytes_value) = v[3];
-    }
-
-    bool start_with(vector<int> v) const
+    bool start_with(vector<unsigned char> v) const
     {
         unsigned ix = 0;
         auto it = v.cbegin();
-        while (it != v.cend())
+        while (it != v.end())
         {
-            switch (ix)
+           switch (ix)
             {
             case 0:
-                if ( std::get<0>(m_value.bytes_value ) != *it) return false;
+                if ( std::get<0>(*this ) != *it) return false;
                 break;
             case 1:
-                if (std::get<1>(m_value.bytes_value) != *it) return false;
-                break;
+                if (std::get<1>(*this) != *it) return false;
+               break;
             case 2:
-                if (std::get<2>(m_value.bytes_value) != *it) return false;
+                if (std::get<2>(*this) != *it) return false;
                 break;
             case 3:
-                if (std::get<3>(m_value.bytes_value) != *it) return false;
-                break;
+                if (std::get<3>(*this) != *it) return false;
             }
             ix++;
             it++;
@@ -148,17 +118,12 @@ struct ip_t
         return true;
     }
 
-    bool operator<(const ip_t& bro) const
+    bool find(unsigned char uch)
     {
-        return m_value.uint_value < bro.m_value.uint_value;
-    }
-
-    bool find(int uch)
-    {
-        if (uch == std::get<0>(m_value.bytes_value)
-            or uch == std::get<1>(m_value.bytes_value)
-            or uch == std::get<2>(m_value.bytes_value)
-            or uch == std::get<3>(m_value.bytes_value))
+        if (uch == std::get<0>(*this)
+            or uch == std::get<1>(*this)
+            or uch == std::get<2>(*this)
+            or uch == std::get<3>(*this))
         {
             return true;
         }
@@ -169,24 +134,22 @@ struct ip_t
 
 ostream& operator<< (std::ostream& os, const ip_t& ip)
 {
-    os << ip.m_value.to_string();
+    os << ip.to_string();
     return os;
 }
 
 struct ip_set_t : public multiset<ip_t>
 {
-public:
-
     friend ostream& operator<< (ostream&, const ip_set_t&);
 
-    ip_set_t filter_any(int i)
+    ip_set_t filter_any(unsigned char i)
     {
         ip_set_t subset;
         std::for_each(begin(), end(), [&](auto ip) {if (ip.find(i)) subset.insert(ip); });
         return subset;
     }
 
-    ip_set_t filter(int uch)
+    ip_set_t filter(unsigned char uch)
     {
         // last link in recursive chain
         ip_set_t subset;
@@ -211,13 +174,13 @@ public:
     }
 
     template<typename... Types>
-    ip_set_t filter(int uch, Types... Other)
+    ip_set_t filter(unsigned char uch, Types... Other)
     {
         search_v.push_back(uch);
         return filter(Other...);
     }
 private:
-    vector<int> search_v;
+    vector<unsigned char> search_v;
 };
 
 ostream& operator<< (ostream& os, const ip_set_t& ip_set)

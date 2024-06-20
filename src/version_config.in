@@ -1,8 +1,0 @@
-#ifndef _VERSION_CONFIG_H_
-#define _VERSION_CONFIG_H_
-
-#define HOMEWORK2_VERSION @PATCH_VERSION@
-
-int version();
-
-#endif
